@@ -18,6 +18,12 @@ import (
 	"github.com/spaceuptech/space-cloud/gateway/modules/crud/sql"
 )
 
+type Modules struct {
+	sync.RWMutex
+	// 保存所有模块
+	modules map[string]*Module
+}
+
 // Module is the root block providing convenient wrappers
 type Module struct {
 	sync.RWMutex
@@ -40,9 +46,6 @@ type Module struct {
 
 	// Schema module
 	schemaDoc model.Type
-
-	// 保存所有模块
-	modules map[string]*Module
 }
 
 type loader struct {
@@ -131,6 +134,29 @@ func (m *Module) CloseConfig() error {
 	}
 
 	m.closeBatchOperation()
+
+	return nil
+}
+
+// GetDBType returns the type of the db for the alias provided
+func (ms *Modules) GetDBType(dbAlias string) (string, error) {
+	ms.RLock()
+	defer ms.RUnlock()
+
+	return ms.getDBType(dbAlias)
+}
+
+// CloseConfig close the rules and secret key required by the crud block
+func (ms *Modules) CloseConfig() error {
+	// Acquire a lock
+	ms.Lock()
+	defer ms.Unlock()
+
+	for _, m := range ms.modules {
+		if err := m.CloseConfig(); err != nil {
+			return err
+		}
+	}
 
 	return nil
 }

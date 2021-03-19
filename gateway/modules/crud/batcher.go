@@ -47,12 +47,9 @@ func (m *Module) closeBatchOperation() {
 }
 
 // initBatchOperation creates go routines for executing batch operation associated with individual collection
-func (m *Module) initBatchOperation(project string, crud config.DatabaseSchemas, dbAlias string) error {
+func (m *Module) initBatchOperation(project string, crud config.DatabaseSchemas) error {
 	batch := batchMap{}
 	for _, schema := range crud {
-		if schema.DbAlias != dbAlias {
-			continue
-		}
 		dbInfo, err := m.getDBInfo(schema.DbAlias)
 		if err != nil {
 			return err
@@ -141,4 +138,19 @@ func (m *Module) sendResponses(responseChannels []batchResponseChan, response ba
 	for _, responseChan := range responseChannels {
 		responseChan <- response
 	}
+}
+
+// initBatchOperation creates go routines for executing batch operation associated with individual collection
+func (ms *Modules) initBatchOperation(project string, schemas config.DatabaseSchemas) error {
+	for sKey, schema := range schemas {
+		for _, m := range ms.modules {
+			if schema.DbAlias == m.alias {
+				if err := m.initBatchOperation(project, config.DatabaseSchemas{sKey: schema}); err != nil {
+					return err
+				}
+				break
+			}
+		}
+	}
+	return nil
 }
