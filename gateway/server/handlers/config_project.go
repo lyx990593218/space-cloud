@@ -3,7 +3,6 @@ package handlers
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -91,10 +90,41 @@ func HandleApplyProject(adminMan *admin.Manager, syncman *syncman.Manager) http.
 func HandleDeleteProjectConfig(adminMan *admin.Manager, syncMan *syncman.Manager) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
-		defer utils.CloseTheCloser(r.Body)
+		//defer utils.CloseTheCloser(r.Body)
 
 		// Give negative acknowledgement
-		_ = helpers.Response.SendErrorResponse(r.Context(), w, http.StatusInternalServerError, errors.New("Operation not supported"))
+		//_ = helpers.Response.SendErrorResponse(r.Context(), w, http.StatusInternalServerError, errors.New("Operation not supported"))
+
+		// Get the JWT token from header
+		token := utils.GetTokenFromHeader(r)
+		projectConfig := config.ProjectConfig{}
+		_ = json.NewDecoder(r.Body).Decode(&projectConfig)
+		defer utils.CloseTheCloser(r.Body)
+
+		vars := mux.Vars(r)
+		projectID := vars["project"]
+
+		projectConfig.ID = projectID
+
+		ctx, cancel := context.WithTimeout(r.Context(), time.Duration(utils.DefaultContextTime)*time.Second)
+		defer cancel()
+
+		// Check if the request is authorised
+		reqParams, err := adminMan.IsTokenValid(ctx, token, "project", "modify", map[string]string{"project": projectID})
+		if err != nil {
+			_ = helpers.Response.SendErrorResponse(ctx, w, http.StatusUnauthorized, err)
+			return
+		}
+
+		reqParams = utils.ExtractRequestParams(r, reqParams, projectConfig)
+
+		statusCode, err := syncMan.DeleteProjectConfig(ctx, projectID, reqParams)
+		if err != nil {
+			_ = helpers.Response.SendErrorResponse(ctx, w, statusCode, err)
+			return
+		}
+
+		_ = helpers.Response.SendOkayResponse(ctx, statusCode, w)
 	}
 }
 

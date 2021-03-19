@@ -14,14 +14,14 @@ import (
 	"github.com/spaceuptech/space-cloud/gateway/utils"
 )
 
-// SetConfig set the rules and secret key required by the crud block
-func (m *Module) SetConfig(project string, crud config.DatabaseConfigs) error {
+// SetConfig set the rules and secret key required by the crud block and dbAlias
+func (m *Module) SetConfig(project string, crud config.DatabaseConfigs, dbAlias string) error {
 	m.Lock()
 	defer m.Unlock()
 
-	if len(crud) > 1 {
+	/*if len(crud) > 1 {
 		return helpers.Logger.LogError(helpers.GetRequestID(context.TODO()), "Crud module cannot have more than 1 database", nil, map[string]interface{}{"project": project})
-	}
+	}*/
 
 	m.project = project
 	if len(crud) == 0 && m.block != nil {
@@ -35,10 +35,21 @@ func (m *Module) SetConfig(project string, crud config.DatabaseConfigs) error {
 
 	// Create a new crud blocks
 	for _, v := range crud {
+		fmt.Println("SetConfig===========v1:"+dbAlias, v)
+		fmt.Println("SetConfig===========v2:" + v.DbAlias)
+
+		if v.DbAlias != dbAlias {
+			continue
+		}
+
+		fmt.Println("SetConfig===========dbAlias:"+v.DbAlias, dbAlias)
+
+		fmt.Println("SetConfig===========Type:" + v.Type)
 		if v.Type == "" {
 			v.Type = v.DbAlias
 		}
 
+		fmt.Println("SetConfig===========DBName:" + v.DBName)
 		// set default database name to project id
 		if v.DBName == "" {
 			v.DBName = project
@@ -47,7 +58,7 @@ func (m *Module) SetConfig(project string, crud config.DatabaseConfigs) error {
 		if v.Limit == 0 {
 			v.Limit = model.DefaultFetchLimit
 		}
-
+		fmt.Println("SetConfig===========Type:", v.Type)
 		// check if connection string starts with secrets
 		secretName, isSecretExists := splitConnectionString(v.Conn)
 		connectionString := v.Conn
@@ -58,26 +69,33 @@ func (m *Module) SetConfig(project string, crud config.DatabaseConfigs) error {
 				return helpers.Logger.LogError(helpers.GetRequestID(context.TODO()), "Unable to fetch connection string secret from runner", err, map[string]interface{}{"project": project})
 			}
 		}
-
+		fmt.Println("SetConfig===========Type:", v.Type)
 		if m.block != nil {
+			fmt.Println("SetConfig===========block:", m.block)
 			m.block.SetQueryFetchLimit(v.Limit)
 			m.config.BatchTime = v.BatchTime
 			m.config.BatchRecords = v.BatchRecords
 
 			// Skip if the connection string, dbName & driver config is same
+			fmt.Println("SetConfig===========connectionString:", connectionString)
+			fmt.Println("SetConfig===========DBName:", v.DBName)
+			fmt.Println("SetConfig===========DriverConf:", v.DriverConf)
 			if m.block.IsSame(connectionString, v.DBName, v.DriverConf) {
-				continue
+				fmt.Println("SetConfig===========IsSame:", true)
+				//continue
 			}
 			// Close the previous database connection
 			if err := m.block.Close(); err != nil {
 				return helpers.Logger.LogError(helpers.GetRequestID(context.TODO()), "Unable to close database connections", err, map[string]interface{}{"project": project})
 			}
 		}
-
+		fmt.Println("SetConfig===========block:", m.block)
 		var c Crud
 		var err error
 
+		fmt.Println("SetConfig===========v:", v)
 		v.Type = strings.TrimPrefix(v.Type, "sql-")
+		fmt.Println("SetConfig===========v:", v)
 		c, err = m.initBlock(model.DBType(v.Type), v.Enabled, connectionString, v.DBName, v.DriverConf)
 
 		if v.Enabled {
@@ -92,6 +110,25 @@ func (m *Module) SetConfig(project string, crud config.DatabaseConfigs) error {
 		m.block = c
 		m.alias = strings.TrimPrefix(v.DbAlias, "sql-")
 		m.block.SetQueryFetchLimit(v.Limit)
+
+		if m.modules == nil {
+			module := make(map[string]*Module)
+			module[v.DbAlias] = m
+			m.modules = module
+
+			for _, mm := range m.modules {
+				fmt.Println("SetConfig===========mm1:", mm)
+			}
+		} else {
+			for _, mm := range m.modules {
+				fmt.Println("SetConfig===========mm2:", mm)
+			}
+			m.modules[v.DbAlias] = m
+		}
+
+		for _, mm := range m.modules {
+			fmt.Println("SetConfig===========mm3:", mm)
+		}
 	}
 
 	return nil
@@ -102,24 +139,40 @@ func (m *Module) SetPreparedQueryConfig(ctx context.Context, prepQueries config.
 	m.Lock()
 	defer m.Unlock()
 
-	if m.block == nil {
+	for _, mm := range m.modules {
+		if mm.block == nil {
+			helpers.Logger.LogDebug(helpers.GetRequestID(ctx), "Unable to get database connection, crud module not initialized", nil)
+			continue
+		}
+
+		temp := make(config.DatabasePreparedQueries)
+		for _, preparedQuery := range prepQueries {
+			if preparedQuery.DbAlias != mm.alias {
+				helpers.Logger.LogError(helpers.GetRequestID(ctx), fmt.Sprintf("Unknown dbAlias (%s) provided in prepared query", preparedQuery.DbAlias), nil, map[string]interface{}{"queryId": preparedQuery.ID})
+				continue
+			}
+			temp[getPreparedQueryKey(strings.TrimPrefix(preparedQuery.DbAlias, "sql-"), preparedQuery.ID)] = preparedQuery
+		}
+		mm.queries = temp
+	}
+	/*if m.block == nil {
 		helpers.Logger.LogDebug(helpers.GetRequestID(ctx), "Unable to get database connection, crud module not initialized", nil)
 		return nil
-	}
+	}*/
 
-	temp := make(config.DatabasePreparedQueries)
+	/*temp := make(config.DatabasePreparedQueries)
 	for _, preparedQuery := range prepQueries {
 		if preparedQuery.DbAlias != m.alias {
 			return helpers.Logger.LogError(helpers.GetRequestID(ctx), fmt.Sprintf("Unknown dbAlias (%s) provided in prepared query", preparedQuery.DbAlias), nil, map[string]interface{}{"queryId": preparedQuery.ID})
 		}
 		temp[getPreparedQueryKey(strings.TrimPrefix(preparedQuery.DbAlias, "sql-"), preparedQuery.ID)] = preparedQuery
 	}
-	m.queries = temp
+	m.queries = temp*/
 	return nil
 }
 
 // SetSchemaConfig set schema config of crud module
-func (m *Module) SetSchemaConfig(ctx context.Context, schemaDoc model.Type, schemas config.DatabaseSchemas) error {
+func (m *Module) SetSchemaConfig(ctx context.Context, schemaDoc model.Type, schemas config.DatabaseSchemas, dbAlias string) error {
 	m.Lock()
 	defer m.Unlock()
 
@@ -131,7 +184,7 @@ func (m *Module) SetSchemaConfig(ctx context.Context, schemaDoc model.Type, sche
 	m.schemaDoc = schemaDoc
 
 	m.closeBatchOperation()
-	if err := m.initBatchOperation(m.project, schemas); err != nil {
+	if err := m.initBatchOperation(m.project, schemas, dbAlias); err != nil {
 		return helpers.Logger.LogError(helpers.GetRequestID(ctx), "Unable to initialize database batch operation", err, nil)
 	}
 	return nil

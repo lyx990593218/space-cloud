@@ -63,6 +63,7 @@ func (s *Server) routes(profiler bool, staticPath string, restrictedHosts []stri
 	router.Methods(http.MethodPost).Path("/v1/config/projects/{project}/file-storage/rules/{id}").HandlerFunc(handlers.HandleSetFileRule(s.managers.Admin(), s.managers.Sync()))
 	router.Methods(http.MethodDelete).Path("/v1/config/projects/{project}/file-storage/rules/{id}").HandlerFunc(handlers.HandleDeleteFileRule(s.managers.Admin(), s.managers.Sync()))
 
+	//router.Methods(http.MethodGet).Path("/v1/external/projects/{project}/database/{dbAlias}/connection-state").HandlerFunc(handlers.HandleGetDatabaseConnectionState2(s.managers.Admin(), s.modules, s.managers.Sync()))
 	router.Methods(http.MethodGet).Path("/v1/external/projects/{project}/database/{dbAlias}/connection-state").HandlerFunc(handlers.HandleGetDatabaseConnectionState(s.managers.Admin(), s.modules))
 	router.Methods(http.MethodGet).Path("/v1/external/projects/{project}/database/{dbAlias}/list-collections").HandlerFunc(handlers.HandleGetAllTableNames(s.managers.Admin(), s.modules))
 	router.Methods(http.MethodGet).Path("/v1/config/projects/{project}/database/collections/rules").HandlerFunc(handlers.HandleGetTableRules(s.managers.Admin(), s.managers.Sync()))

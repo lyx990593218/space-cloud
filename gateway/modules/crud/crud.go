@@ -40,6 +40,9 @@ type Module struct {
 
 	// Schema module
 	schemaDoc model.Type
+
+	// 保存所有模块
+	modules map[string]*Module
 }
 
 type loader struct {

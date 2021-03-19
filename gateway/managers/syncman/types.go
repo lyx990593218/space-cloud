@@ -27,8 +27,10 @@ type ModulesInterface interface {
 	SetProjectConfig(ctx context.Context, config *config.ProjectConfig) error
 
 	// SetDatabaseConfig sets the config of crud, auth, schema and realtime modules
-	SetDatabaseConfig(ctx context.Context, projectID string, databaseConfigs config.DatabaseConfigs, schemaConfigs config.DatabaseSchemas, ruleConfigs config.DatabaseRules, prepConfigs config.DatabasePreparedQueries) error
-	SetDatabaseSchemaConfig(ctx context.Context, projectID string, schemaConfigs config.DatabaseSchemas) error
+	//SetDatabaseConfig(ctx context.Context, projectID string, databaseConfigs config.DatabaseConfigs, schemaConfigs config.DatabaseSchemas, ruleConfigs config.DatabaseRules, prepConfigs config.DatabasePreparedQueries) error
+	// SetDatabaseConfig sets the config of crud, auth, schema and realtime modules and dbAlias
+	SetDatabaseConfig(ctx context.Context, projectID string, databaseConfigs config.DatabaseConfigs, schemaConfigs config.DatabaseSchemas, ruleConfigs config.DatabaseRules, prepConfigs config.DatabasePreparedQueries, dbAlias string) error
+	SetDatabaseSchemaConfig(ctx context.Context, projectID string, schemaConfigs config.DatabaseSchemas, dbAlias string) error
 	SetDatabaseRulesConfig(ctx context.Context, ruleConfigs config.DatabaseRules) error
 	SetDatabasePreparedQueryConfig(ctx context.Context, prepConfigs config.DatabasePreparedQueries) error
 

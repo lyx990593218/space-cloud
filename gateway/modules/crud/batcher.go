@@ -47,9 +47,12 @@ func (m *Module) closeBatchOperation() {
 }
 
 // initBatchOperation creates go routines for executing batch operation associated with individual collection
-func (m *Module) initBatchOperation(project string, crud config.DatabaseSchemas) error {
+func (m *Module) initBatchOperation(project string, crud config.DatabaseSchemas, dbAlias string) error {
 	batch := batchMap{}
 	for _, schema := range crud {
+		if schema.DbAlias != dbAlias {
+			continue
+		}
 		dbInfo, err := m.getDBInfo(schema.DbAlias)
 		if err != nil {
 			return err

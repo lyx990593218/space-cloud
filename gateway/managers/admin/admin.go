@@ -21,7 +21,7 @@ type Manager struct {
 func New(nodeID, clusterID string, isDev bool, adminUserInfo *config.AdminUser) *Manager {
 	m := new(Manager)
 	m.user = adminUserInfo
-	m.quotas = model.UsageQuotas{MaxDatabases: 1, MaxProjects: 1}
+	m.quotas = model.UsageQuotas{MaxDatabases: 2, MaxProjects: 2}
 	m.nodeID = nodeID
 	m.clusterID = clusterID
 	m.isProd = !isDev

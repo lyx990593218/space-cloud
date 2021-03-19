@@ -34,7 +34,7 @@ func (s *Manager) SetDeleteCollection(ctx context.Context, project, dbAlias, col
 	resourceID := config.GenerateResourceID(s.clusterID, project, config.ResourceDatabaseSchema, dbAlias, col)
 	delete(projectConfig.DatabaseSchemas, resourceID)
 
-	if err := s.modules.SetDatabaseSchemaConfig(ctx, project, projectConfig.DatabaseSchemas); err != nil {
+	if err := s.modules.SetDatabaseSchemaConfig(ctx, project, projectConfig.DatabaseSchemas, dbAlias); err != nil {
 		return http.StatusInternalServerError, helpers.Logger.LogError(helpers.GetRequestID(ctx), "Unable to set crud config", err, nil)
 	}
 
@@ -73,13 +73,15 @@ func (s *Manager) SetDatabaseConnection(ctx context.Context, project, dbAlias st
 
 	v.DbAlias = dbAlias
 	resourceID := config.GenerateResourceID(s.clusterID, project, config.ResourceDatabaseConfig, dbAlias)
+
+	//projectConfig.DatabaseConfigs = config.DatabaseConfigs{resourceID: v}
 	if projectConfig.DatabaseConfigs == nil {
 		projectConfig.DatabaseConfigs = config.DatabaseConfigs{resourceID: v}
 	} else {
 		projectConfig.DatabaseConfigs[resourceID] = v
 	}
 
-	if err := s.modules.SetDatabaseConfig(ctx, project, projectConfig.DatabaseConfigs, projectConfig.DatabaseSchemas, projectConfig.DatabaseRules, projectConfig.DatabasePreparedQueries); err != nil {
+	if err := s.modules.SetDatabaseConfig(ctx, project, projectConfig.DatabaseConfigs, projectConfig.DatabaseSchemas, projectConfig.DatabaseRules, projectConfig.DatabasePreparedQueries, dbAlias); err != nil {
 		return http.StatusInternalServerError, helpers.Logger.LogError(helpers.GetRequestID(ctx), "Unable to set crud config", err, nil)
 	}
 
@@ -135,7 +137,7 @@ func (s *Manager) RemoveDatabaseConfig(ctx context.Context, project, dbAlias str
 		}
 	}
 
-	if err := s.modules.SetDatabaseConfig(ctx, project, projectConfig.DatabaseConfigs, projectConfig.DatabaseSchemas, projectConfig.DatabaseRules, projectConfig.DatabasePreparedQueries); err != nil {
+	if err := s.modules.SetDatabaseConfig(ctx, project, projectConfig.DatabaseConfigs, projectConfig.DatabaseSchemas, projectConfig.DatabaseRules, projectConfig.DatabasePreparedQueries, dbAlias); err != nil {
 		return http.StatusInternalServerError, helpers.Logger.LogError(helpers.GetRequestID(ctx), "Unable to set crud config", err, nil)
 	}
 
@@ -300,7 +302,7 @@ func (s *Manager) SetModifySchema(ctx context.Context, project, dbAlias, col str
 		projectConfig.DatabaseSchemas[resourceID] = v
 	}
 
-	if err := s.modules.SetDatabaseSchemaConfig(ctx, project, projectConfig.DatabaseSchemas); err != nil {
+	if err := s.modules.SetDatabaseSchemaConfig(ctx, project, projectConfig.DatabaseSchemas, dbAlias); err != nil {
 		return http.StatusInternalServerError, helpers.Logger.LogError(helpers.GetRequestID(ctx), "Unable to set crud config", err, nil)
 	}
 
@@ -417,7 +419,7 @@ func (s *Manager) SetReloadSchema(ctx context.Context, dbAlias, project string, 
 		dbSchema.Schema = result
 	}
 
-	if err := s.modules.SetDatabaseSchemaConfig(ctx, project, projectConfig.DatabaseSchemas); err != nil {
+	if err := s.modules.SetDatabaseSchemaConfig(ctx, project, projectConfig.DatabaseSchemas, dbAlias); err != nil {
 		return http.StatusInternalServerError, helpers.Logger.LogError(helpers.GetRequestID(ctx), "Unable to set crud config", err, nil)
 	}
 
@@ -461,7 +463,7 @@ func (s *Manager) SetSchemaInspection(ctx context.Context, project, dbAlias, col
 	} else {
 		projectConfig.DatabaseSchemas[resourceID] = v
 	}
-	if err := s.modules.SetDatabaseSchemaConfig(ctx, project, projectConfig.DatabaseSchemas); err != nil {
+	if err := s.modules.SetDatabaseSchemaConfig(ctx, project, projectConfig.DatabaseSchemas, dbAlias); err != nil {
 		return http.StatusBadRequest, helpers.Logger.LogError(helpers.GetRequestID(ctx), "error setting crud config", err, nil)
 	}
 
@@ -491,7 +493,7 @@ func (s *Manager) RemoveCollection(ctx context.Context, project, dbAlias, col st
 	dbSchemaResourceID := config.GenerateResourceID(s.clusterID, project, config.ResourceDatabaseSchema, dbAlias, col)
 	delete(projectConfig.DatabaseSchemas, dbSchemaResourceID)
 
-	if err := s.modules.SetDatabaseSchemaConfig(ctx, project, projectConfig.DatabaseSchemas); err != nil {
+	if err := s.modules.SetDatabaseSchemaConfig(ctx, project, projectConfig.DatabaseSchemas, dbAlias); err != nil {
 		return http.StatusInternalServerError, helpers.Logger.LogError(helpers.GetRequestID(ctx), "error setting crud config", err, nil)
 	}
 
@@ -553,7 +555,7 @@ func (s *Manager) applySchemas(ctx context.Context, project, dbAlias string, pro
 		return err
 	}
 
-	if err := s.modules.SetDatabaseSchemaConfig(ctx, project, projectConfig.DatabaseSchemas); err != nil {
+	if err := s.modules.SetDatabaseSchemaConfig(ctx, project, projectConfig.DatabaseSchemas, dbAlias); err != nil {
 		return helpers.Logger.LogError(helpers.GetRequestID(ctx), "Unable to set crud config", err, nil)
 	}
 

@@ -86,6 +86,51 @@ func HandleGetDatabaseConnectionState(adminMan *admin.Manager, modules *modules.
 	}
 }
 
+// HandleGetDatabaseConnectionState2 gives the status of connection state of client
+func HandleGetDatabaseConnectionState2(adminMan *admin.Manager, modules *modules.Modules, syncman *syncman.Manager) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+
+		// Get the JWT token from header
+		token := utils.GetTokenFromHeader(r)
+
+		vars := mux.Vars(r)
+		projectID := vars["project"]
+		dbAlias := vars["dbAlias"]
+
+		v := config.DatabaseConfig{}
+		_ = json.NewDecoder(r.Body).Decode(&v)
+		defer utils.CloseTheCloser(r.Body)
+
+		ctx, cancel := context.WithTimeout(r.Context(), 60*time.Second)
+		defer cancel()
+
+		// Check if the request is authorised
+		reqParams, err := adminMan.IsTokenValid(ctx, token, "db-config", "read", map[string]string{"project": projectID, "db": dbAlias})
+		if err != nil {
+			_ = helpers.Response.SendErrorResponse(ctx, w, http.StatusUnauthorized, err)
+			return
+		}
+
+		reqParams = utils.ExtractRequestParams(r, reqParams, v)
+		fmt.Println("HandleGetDatabaseConnectionState2===========ctx:", ctx)
+		fmt.Println("HandleGetDatabaseConnectionState2===========projectID:", projectID)
+		fmt.Println("HandleGetDatabaseConnectionState2===========dbAlias:", dbAlias)
+		fmt.Println("HandleGetDatabaseConnectionState2===========v:", &v)
+		fmt.Println("HandleGetDatabaseConnectionState2===========reqParams:", reqParams)
+		status, err := syncman.SetDatabaseConnection(ctx, projectID, dbAlias, &v, reqParams)
+		fmt.Println("HandleGetDatabaseConnectionState2====:", err == nil)
+		if err != nil {
+			_ = helpers.Response.SendErrorResponse(ctx, w, status, err)
+			return
+		}
+		crud := modules.DB()
+		connState := crud.GetConnectionState(ctx, dbAlias)
+
+		_ = helpers.Response.SendResponse(ctx, w, http.StatusOK, model.Response{Result: connState})
+
+	}
+}
+
 // HandleDeleteTable is an endpoint handler which deletes a table in specified database & removes it from config
 func HandleDeleteTable(adminMan *admin.Manager, modules *modules.Modules, syncman *syncman.Manager) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -133,7 +178,10 @@ func HandleSetDatabaseConfig(adminMan *admin.Manager, syncman *syncman.Manager) 
 		projectID := vars["project"]
 
 		v := config.DatabaseConfig{}
+		fmt.Println("HandleSetDatabaseConfig===========v1:", v)
+		fmt.Println("HandleSetDatabaseConfig===========r.Body:", r.Body)
 		_ = json.NewDecoder(r.Body).Decode(&v)
+		fmt.Println("HandleSetDatabaseConfig===========v2:", v)
 		defer utils.CloseTheCloser(r.Body)
 
 		ctx, cancel := context.WithTimeout(r.Context(), 60*time.Second)
@@ -147,8 +195,13 @@ func HandleSetDatabaseConfig(adminMan *admin.Manager, syncman *syncman.Manager) 
 		}
 
 		reqParams = utils.ExtractRequestParams(r, reqParams, v)
+		fmt.Println("HandleSetDatabaseConfig===========ctx:", ctx)
+		fmt.Println("HandleSetDatabaseConfig===========projectID:", projectID)
+		fmt.Println("HandleSetDatabaseConfig===========dbAlias:", dbAlias)
+		fmt.Println("HandleSetDatabaseConfig===========v:", &v)
+		fmt.Println("HandleSetDatabaseConfig===========reqParams:", reqParams)
 		status, err := syncman.SetDatabaseConnection(ctx, projectID, dbAlias, &v, reqParams)
-		fmt.Println("ABCDEF", err == nil)
+		fmt.Println("HandleSetDatabaseConfig", err == nil)
 		if err != nil {
 			_ = helpers.Response.SendErrorResponse(ctx, w, status, err)
 			return

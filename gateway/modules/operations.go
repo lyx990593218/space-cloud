@@ -2,6 +2,7 @@ package modules
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/spaceuptech/helpers"
 
@@ -13,7 +14,7 @@ import (
 func (m *Modules) SetInitialProjectConfig(ctx context.Context, projects config.Projects) error {
 	for projectID, project := range projects {
 		helpers.Logger.LogDebug(helpers.GetRequestID(ctx), "Setting config of db module", nil)
-		if err := m.db.SetConfig(projectID, project.DatabaseConfigs); err != nil {
+		if err := m.db.SetConfig(projectID, project.DatabaseConfigs, ""); err != nil {
 			_ = helpers.Logger.LogError(helpers.GetRequestID(ctx), "Unable to set db module config", err, nil)
 		}
 		if err := m.db.SetProjectAESKey(project.ProjectConfig.AESKey); err != nil {
@@ -24,7 +25,7 @@ func (m *Modules) SetInitialProjectConfig(ctx context.Context, projects config.P
 		if err != nil {
 			return err
 		}
-		if err := m.db.SetSchemaConfig(ctx, schemaDoc, project.DatabaseSchemas); err != nil {
+		if err := m.db.SetSchemaConfig(ctx, schemaDoc, project.DatabaseSchemas, ""); err != nil {
 			_ = helpers.Logger.LogError(helpers.GetRequestID(ctx), "Unable to set schema db module config", err, nil)
 		}
 		if err := m.db.SetPreparedQueryConfig(ctx, project.DatabasePreparedQueries); err != nil {
@@ -109,18 +110,25 @@ func (m *Modules) SetProjectConfig(ctx context.Context, p *config.ProjectConfig)
 	return nil
 }
 
-// SetDatabaseConfig sets the config of db, auth, schema and realtime modules
-func (m *Modules) SetDatabaseConfig(ctx context.Context, projectID string, databaseConfigs config.DatabaseConfigs, schemaConfigs config.DatabaseSchemas, ruleConfigs config.DatabaseRules, prepConfigs config.DatabasePreparedQueries) error {
+// SetDatabaseConfig sets the config of db, auth, schema and realtime modules and dbAlias
+func (m *Modules) SetDatabaseConfig(ctx context.Context, projectID string, databaseConfigs config.DatabaseConfigs, schemaConfigs config.DatabaseSchemas, ruleConfigs config.DatabaseRules, prepConfigs config.DatabasePreparedQueries, dbAlias string) error {
 	helpers.Logger.LogDebug(helpers.GetRequestID(ctx), "Setting config of db module", nil)
-	if err := m.db.SetConfig(projectID, databaseConfigs); err != nil {
+	if err := m.db.SetConfig(projectID, databaseConfigs, dbAlias); err != nil {
 		return helpers.Logger.LogError(helpers.GetRequestID(ctx), "Unable to set db module config", err, nil)
 	}
 
 	helpers.Logger.LogDebug(helpers.GetRequestID(ctx), "Setting config of realtime module", nil)
 	m.realtime.SetDatabaseConfig(databaseConfigs)
 
+	for key, d := range databaseConfigs {
+		fmt.Println("SetDatabaseConfig===========databaseConfigs:"+key, d)
+	}
+
+	for key, s := range schemaConfigs {
+		fmt.Println("SetDatabaseConfig===========schemaConfigs:"+key, s)
+	}
 	// Set the schema config as well
-	if err := m.SetDatabaseSchemaConfig(ctx, projectID, schemaConfigs); err != nil {
+	if err := m.SetDatabaseSchemaConfig(ctx, projectID, schemaConfigs, dbAlias); err != nil {
 		return err
 	}
 
@@ -138,13 +146,13 @@ func (m *Modules) SetDatabaseConfig(ctx context.Context, projectID string, datab
 }
 
 // SetDatabaseSchemaConfig sets database schema config
-func (m *Modules) SetDatabaseSchemaConfig(ctx context.Context, projectID string, schemaConfigs config.DatabaseSchemas) error {
+func (m *Modules) SetDatabaseSchemaConfig(ctx context.Context, projectID string, schemaConfigs config.DatabaseSchemas, dbAlias string) error {
 	helpers.Logger.LogDebug(helpers.GetRequestID(ctx), "Setting config of db schema in db module", nil)
 	schemaDoc, err := schemaHelpers.Parser(schemaConfigs)
 	if err != nil {
 		return err
 	}
-	if err := m.db.SetSchemaConfig(ctx, schemaDoc, schemaConfigs); err != nil {
+	if err := m.db.SetSchemaConfig(ctx, schemaDoc, schemaConfigs, dbAlias); err != nil {
 		return helpers.Logger.LogError(helpers.GetRequestID(ctx), "Unable to set db schema in db module", err, nil)
 	}
 	helpers.Logger.LogDebug(helpers.GetRequestID(ctx), "Setting config of schema module", nil)

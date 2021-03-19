@@ -10,7 +10,7 @@ COPY . .
 RUN apk --no-cache add ca-certificates wget unzip
 
 # Build SC
-RUN GOOS=linux CGO_ENABLED=0 go build -a -ldflags '-s -w -extldflags "-static"' -o app .
+RUN GOOS=linux CGO_ENABLED=0 GOPROXY=https://goproxy.io,direct go build -a -ldflags '-s -w -extldflags "-static"' -o app .
 
 # Download mission control
 RUN echo $SC_VERSION && wget https://storage.googleapis.com/space-cloud/mission-control/mission-control-v$SC_VERSION.zip && unzip mission-control-v$SC_VERSION.zip

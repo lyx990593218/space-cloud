@@ -3,6 +3,7 @@ package crud
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/spaceuptech/helpers"
@@ -47,15 +48,37 @@ func getPreparedQueryKey(dbAlias, id string) string {
 
 // NOTE: the parent function should take lock on module before calling this function
 func (m *Module) getDBInfo(dbAlias string) (*config.DatabaseConfig, error) {
-	if m.alias != dbAlias {
+	/*if m.alias != dbAlias {
 		return nil, fmt.Errorf("dbAlias (%s) does not exists", dbAlias)
 	}
-	return m.config, nil
+	return m.config, nil*/
+
+	i := 0
+	for key, mm := range m.modules {
+		fmt.Println(strconv.Itoa(i)+"+++"+key+":::getDBInfo===========project:", mm)
+		i++
+		fmt.Println(strconv.Itoa(i)+"+++"+key+":::getDBInfo===========alias:", m.alias+"====:"+dbAlias+"=====:"+mm.alias)
+		fmt.Println(strconv.Itoa(i)+"+++"+key+":::getDBInfo===========dbType:", m.dbType+"=====:"+mm.dbType)
+		fmt.Println(strconv.Itoa(i)+"+++"+key+":::getDBInfo===========project:", m.project+"=====:"+mm.project)
+
+		if mm.config != nil && mm.alias == dbAlias {
+			return mm.config, nil
+		}
+	}
+
+	return nil, fmt.Errorf("dbAlias (%s) does not exists", dbAlias)
 }
 
 func (m *Module) getCrudBlock(dbAlias string) (Crud, error) {
-	if m.block != nil && m.alias == dbAlias {
-		return m.block, nil
+	fmt.Println("getCrudBlock===========m.modules:", m.modules)
+	for _, mm := range m.modules {
+		fmt.Println("getCrudBlock===========alias:", m.alias+"====:"+dbAlias+"=====:"+mm.alias)
+		fmt.Println("getCrudBlock===========dbType:", m.dbType+"=====:"+mm.dbType)
+		fmt.Println("getCrudBlock===========project:", m.project+"=====:"+mm.project)
+
+		if mm.block != nil && mm.alias == dbAlias {
+			return mm.block, nil
+		}
 	}
 	return nil, helpers.Logger.LogError(helpers.GetRequestID(context.TODO()), "Unable to get database connection, ensure you have added a database", fmt.Errorf("crud module not initialized for database (%s)", dbAlias), nil)
 }
@@ -71,8 +94,20 @@ func splitConnectionString(connection string) (string, bool) {
 
 func (m *Module) getDBType(dbAlias string) (string, error) {
 	dbAlias = strings.TrimPrefix(dbAlias, "sql-")
-	if dbAlias != m.alias {
+	/*if dbAlias != m.alias {
 		return "", fmt.Errorf("cannot get db type as invalid db alias (%s) provided", dbAlias)
 	}
-	return m.dbType, nil
+	return m.dbType, nil*/
+
+	for _, mm := range m.modules {
+		fmt.Println("getDBType===========alias:", m.alias+"====:"+dbAlias+"=====:"+mm.alias)
+		fmt.Println("getDBType===========dbType:", m.dbType+"=====:"+mm.dbType)
+		fmt.Println("getDBType===========project:", m.project+"=====:"+mm.project)
+
+		if mm.alias == dbAlias {
+			return mm.dbType, nil
+		}
+	}
+
+	return "", fmt.Errorf("cannot get db type as invalid db alias (%s) provided", dbAlias)
 }
